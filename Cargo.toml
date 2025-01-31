@@ -1,9 +1,13 @@
-[package]
-name = "minipak"
-version = "0.1.0"
-edition = "2021"
-
 [workspace]
-members = ["encore"]
+resolver = "2"
+members = ["crates/encore", "crates/minipak"]
 
-[dependencies]
+[profile.dev]
+panic = "abort"
+opt-level = 2   # Required, as default opt-level has bug where symbols are undefined for some reason
+
+[profile.release]
+debug = true
+lto = "thin"
+strip = true
+panic = "abort"
