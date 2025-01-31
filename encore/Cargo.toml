@@ -1,0 +1,8 @@
+[package]
+name = "encore"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+compiler_builtins = "0.1.144"
+rlibc = "1.0.0"
