@@ -1,9 +1,11 @@
 #![no_std]
 #![no_main]
 #![feature(naked_functions)]
+#![allow(unsafe_op_in_unsafe_fn)]
 
 use core::arch::naked_asm;
 use encore::prelude::*;
+mod cli;
 
 #[allow(unused_attributes)]
 unsafe extern "C" {}
@@ -15,20 +17,30 @@ unsafe extern "C" fn _start() {
 }
 
 #[unsafe(no_mangle)]
-unsafe fn pre_main(_stack_top: *mut u8) {
+unsafe fn pre_main(stack_top: *mut u8) {
     unsafe {
         init_allocator();
     }
-    main().unwrap();
+    main(Env::read(stack_top)).unwrap();
     syscall::exit(0);
 }
 
-fn main() -> Result<(), EncoreError> {
-    let file = File::open("/lib64/ld-linux-x86-64.so.2")?;
-    let map = file.map()?;
+fn main(env: Env) -> Result<(), EncoreError> {
+    let args = cli::Args::parse(&env);
 
-    let s = core::str::from_utf8(&map[1..4]).unwrap();
-    println!("{}", s);
+    let input = File::open(&args.input)?;
+    let input = input.map()?;
+    let input = input.as_ref();
+
+    let compressed = lz4_flex::compress_prepend_size(input);
+    let mut output = File::create(&args.output, 0o755)?;
+    output.write_all(&compressed[..])?;
+
+    println!(
+        "Wrote {} ({:.2}% of input)",
+        args.output,
+        compressed.len() as f64 / input.len() as f64 * 100.0,
+    );
 
     Ok(())
 }

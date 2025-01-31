@@ -5,3 +5,7 @@ edition = "2024"
 
 [dependencies]
 encore = { path = "../encore" }
+lz4_flex = { version = "0.11.3", default-features = false, features = [
+  "safe-encode",
+  "safe-decode",
+] }

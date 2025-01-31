@@ -4,7 +4,6 @@ members = ["crates/encore", "crates/minipak"]
 
 [profile.dev]
 panic = "abort"
-opt-level = 2   # Required, as default opt-level has bug where symbols are undefined for some reason
 
 [profile.release]
 debug = true
