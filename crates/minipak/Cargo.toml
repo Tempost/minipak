@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 encore = { path = "../encore" }
+compiler_builtins = { version = "0.1.144", features = ["mem"] }
 lz4_flex = { version = "0.11.3", default-features = false, features = [
   "safe-encode",
   "safe-decode",

@@ -6,7 +6,7 @@ members = ["crates/encore", "crates/minipak"]
 panic = "abort"
 
 [profile.release]
-debug = true
-lto = "thin"
 strip = true
+lto = true
+opt-level = "z"
 panic = "abort"

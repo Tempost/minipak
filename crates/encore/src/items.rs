@@ -1,8 +1,7 @@
+#![allow(unsafe_op_in_unsafe_fn)]
+
 use crate::memmap::MmapOptions;
 use linked_list_allocator::LockedHeap;
-
-extern crate compiler_builtins;
-extern crate rlibc;
 
 #[global_allocator]
 static ALLOCATOR: LockedHeap = LockedHeap::empty();
@@ -16,17 +15,14 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
 }
 
 #[lang = "eh_personality"]
-fn eh_personality() {}
+extern "C" fn eh_personality() {}
 
 #[unsafe(no_mangle)]
 #[allow(non_snake_case)]
 unsafe extern "C" fn _Unwind_Resume() {}
 
-#[unsafe(no_mangle)]
-unsafe extern "C" fn bcmp(s1: *const u8, s2: *const u8, n: usize) -> i32 {
-    unsafe { compiler_builtins::mem::bcmp(s1, s2, n) }
-}
-
+/// # Safety
+/// Wild west of memory allocation
 pub unsafe fn init_allocator() {
     let heap_size = HEAP_SIZE_MB * 1024 * 1024;
     let heap_bottom = MmapOptions::new(heap_size).map().unwrap();

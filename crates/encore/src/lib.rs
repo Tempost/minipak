@@ -4,6 +4,7 @@
 #![feature(core_intrinsics)]
 
 extern crate alloc;
+extern crate compiler_builtins;
 pub mod env;
 pub mod error;
 pub mod fs;
