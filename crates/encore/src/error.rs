@@ -1,6 +1,6 @@
 use alloc::string::String;
 
-#[derive(Debug)]
+#[derive(displaydoc::Display, Debug)]
 pub enum EncoreError {
     /// Could not open file `0`
     Open(String),

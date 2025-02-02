@@ -5,7 +5,10 @@
 
 use core::arch::naked_asm;
 use encore::prelude::*;
+use pixie::{EndMarker, Manifest, PixieError, Resource, Writer};
 mod cli;
+
+const PAGE_SIZE: u64 = 4 * 1024;
 
 #[allow(unused_attributes)]
 unsafe extern "C" {}
@@ -25,21 +28,57 @@ unsafe fn pre_main(stack_top: *mut u8) {
     syscall::exit(0);
 }
 
-fn main(env: Env) -> Result<(), EncoreError> {
+fn main(env: Env) -> Result<(), PixieError> {
     let args = cli::Args::parse(&env);
 
-    let input = File::open(&args.input)?;
-    let input = input.map()?;
-    let input = input.as_ref();
+    let mut output = Writer::new(&args.output, 0o755)?;
 
-    let compressed = lz4_flex::compress_prepend_size(input);
-    let mut output = File::create(&args.output, 0o755)?;
-    output.write_all(&compressed[..])?;
+    {
+        let stage1 = include_bytes!(concat!(env!("OUT_DIR"), "/embeds/release/stage1"));
+        output.write_all(stage1)?;
+    }
+
+    let guest_offset = output.offset();
+    let guest_compressed_len;
+    let guest_len;
+
+    {
+        let guest = File::open(&args.input)?;
+        let guest = guest.map()?;
+        let guest = guest.as_ref();
+        guest_len = guest.len();
+
+        let guest_compressed = lz4_flex::compress_prepend_size(guest);
+        guest_compressed_len = guest_compressed.len();
+        output.write_all(&guest_compressed[..])?;
+    }
+
+    output.align(PAGE_SIZE)?;
+    let manifest_offset = output.offset();
+
+    {
+        let manifest = Manifest {
+            guest: Resource {
+                offset: guest_offset as _,
+                len: guest_compressed_len as _,
+            },
+        };
+
+        output.write_deku(&manifest)?;
+    }
+
+    {
+        let marker = EndMarker {
+            manifest_offset: manifest_offset as _,
+        };
+
+        output.write_deku(&marker)?;
+    }
 
     println!(
         "Wrote {} ({:.2}% of input)",
         args.output,
-        compressed.len() as f64 / input.len() as f64 * 100.0,
+        output.offset() as f64 / guest_len as f64 * 100.0,
     );
 
     Ok(())
