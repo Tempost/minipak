@@ -107,7 +107,7 @@ impl<'a> Segment<'a> {
         let len = header.filesz as usize;
         Segment {
             header,
-            slice: &full_slice[start..][len..],
+            slice: &full_slice[start..][..len],
         }
     }
 
@@ -116,7 +116,7 @@ impl<'a> Segment<'a> {
         self.header.typ
     }
 
-    /// Returns the segment's type
+    /// Returns slice of the segment
     pub fn slice(&self) -> &[u8] {
         &self.slice
     }
@@ -183,7 +183,7 @@ impl<'a> MappedObject<'a> {
         }
         let mem_len = hull.end - hull.start;
 
-        let mut map_opts = MmapOptions::new(hull.end - hull.start);
+        let mut map_opts = MmapOptions::new(mem_len);
         // TODO: Make it so the map_opts reflect what the segment actually requires
         map_opts.protection(MmapProtection::READ | MmapProtection::WRITE | MmapProtection::EXEC);
         if let Some(at) = at {

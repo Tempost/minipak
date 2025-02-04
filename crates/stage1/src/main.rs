@@ -28,7 +28,7 @@ unsafe fn pre_main(stack_top: *mut u8) {
     syscall::exit(0);
 }
 
-fn main(stack_top: *mut u8, env: Env) -> Result<(), PixieError> {
+fn main(stack_top: *mut u8, mut env: Env) -> Result<(), PixieError> {
     let host = File::open("/proc/self/exe")?;
     let host = host.map()?;
     let host = host.as_ref();
@@ -44,6 +44,15 @@ fn main(stack_top: *mut u8, env: Env) -> Result<(), PixieError> {
     let guest_obj = Object::new(&uncompressed_guest[..])?;
     let guest_mapped = MappedObject::new(&guest_obj, None)?;
     info!("Mapped guest at 0x{:x}", guest_mapped.base());
+
+    let at_phdr = env.find_vector(AuxvType::PHDR);
+    at_phdr.value = guest_mapped.base() + guest_obj.header().ph_offset;
+
+    let at_phnum = env.find_vector(AuxvType::PHNUM);
+    at_phnum.value = guest_obj.header().ph_count as _;
+
+    let at_entry = env.find_vector(AuxvType::ENTRY);
+    at_entry.value = guest_mapped.base_offset() + guest_obj.header().entry_point;
 
     let entry_point = guest_mapped.base() + guest_obj.header().entry_point;
     info!("Jumping to guest's entry point 0x{:x}", entry_point);

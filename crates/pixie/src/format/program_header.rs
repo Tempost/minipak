@@ -61,7 +61,8 @@ pub enum SegmentType {
 }
 
 impl ProgramHeader {
-    pub const SIZE: u16 = 64;
+    pub const SIZE: u16 = 56;
+
     pub const EXECUTE: u32 = 1;
     pub const WRITE: u32 = 2;
     pub const READ: u32 = 4;
@@ -76,8 +77,8 @@ impl ProgramHeader {
 
     /// Returns a range that spans from vaddr to vaddr+memsz
     pub fn mem_range(&self) -> core::ops::Range<u64> {
-        let start = self.vaddr as u64;
-        let len = self.memsz as u64;
+        let start = self.vaddr;
+        let len = self.memsz;
         let end = start + len;
         start..end
     }

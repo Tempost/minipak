@@ -1,0 +1,3 @@
+hello-pie:
+    gcc -g -static-pie hello-pie.c -o hello-pie
+    file hello-pie

@@ -90,7 +90,7 @@ impl Env {
 
     /// Finds an auxiliary vector by type
     /// Panics if the vector cannot be found
-    pub fn find_vectors(&mut self, typ: AuxvType) -> &mut Auxv {
+    pub fn find_vector(&mut self, typ: AuxvType) -> &mut Auxv {
         self.vectors
             .iter_mut()
             .find(|v| v.typ == typ)
