@@ -1,12 +1,16 @@
-use std::process::Command;
+use std::{
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 fn main() {
-    cargo_build("../stage1");
-    println!("cargo:rustc-link-arg-bin=minipak=-nostartfiles");
-    println!("cargo:rustc-link-arg-bin=minipak=-static");
+    cargo_build(&PathBuf::from("../stage1"));
+    for &arg in &["-nostartfiles", "-nodefaultlibs", "-static"] {
+        println!("cargo:rustc-link-arg-bin=minipak={}", arg);
+    }
 }
 
-fn cargo_build(path: &str) {
+fn cargo_build(path: &Path) {
     println!("cargo:rerun-if-changed=..");
 
     let target_dir = format!("{}/embeds", std::env::var("OUT_DIR").unwrap());
@@ -24,7 +28,7 @@ fn cargo_build(path: &str) {
 
     if !output.status.success() {
         panic!(
-            "Building {} failed.\nStdout: {}\nStderr: {}",
+            "Building {:?} failed.\nStdout: {}\nStderr: {}",
             path,
             String::from_utf8_lossy(&output.stdout[..]),
             String::from_utf8_lossy(&output.stderr[..])
