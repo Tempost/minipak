@@ -4,10 +4,11 @@ use std::{
 };
 
 fn main() {
-    cargo_build(&PathBuf::from("../stage1"));
     for &arg in &["-nostartfiles", "-nodefaultlibs", "-static"] {
         println!("cargo:rustc-link-arg-bin=minipak={}", arg);
     }
+
+    cargo_build(&PathBuf::from("../stage1"));
 }
 
 fn cargo_build(path: &Path) {
@@ -18,7 +19,7 @@ fn cargo_build(path: &Path) {
     let output = Command::new("cargo")
         .arg("build")
         .arg("--target-dir")
-        .arg(target_dir)
+        .arg(&target_dir)
         .arg("--release")
         .current_dir(path)
         .spawn()
@@ -29,9 +30,27 @@ fn cargo_build(path: &Path) {
     if !output.status.success() {
         panic!(
             "Building {:?} failed.\nStdout: {}\nStderr: {}",
-            path,
+            path.display(),
             String::from_utf8_lossy(&output.stdout[..]),
             String::from_utf8_lossy(&output.stderr[..])
+        );
+    }
+
+    let lib_name = format!("lib{}.so", path.file_name().unwrap().to_str().unwrap());
+    let output = Command::new("objcopy")
+        .arg("--strip-all")
+        .arg(&format!("release/{}", lib_name))
+        .arg(lib_name)
+        .current_dir(&target_dir)
+        .spawn()
+        .unwrap()
+        .wait_with_output()
+        .unwrap();
+    if !output.status.success() {
+        panic!(
+            "Stripping failed.\nStdout: {}\nStderr: {}",
+            String::from_utf8_lossy(&output.stdout[..]),
+            String::from_utf8_lossy(&output.stderr[..]),
         );
     }
 }

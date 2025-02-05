@@ -3,12 +3,13 @@
 #![feature(naked_functions)]
 #![allow(unsafe_op_in_unsafe_fn)]
 
-use core::arch::naked_asm;
-use encore::prelude::*;
-use pixie::{EndMarker, Manifest, PixieError, Resource, Writer};
 mod cli;
+mod error;
 
-const PAGE_SIZE: u64 = 4 * 1024;
+use core::{arch::naked_asm, ops::Range};
+use encore::prelude::*;
+use error::Error;
+use pixie::{MappedObject, Object, Writer};
 
 #[allow(unused_attributes)]
 unsafe extern "C" {}
@@ -28,58 +29,42 @@ unsafe fn pre_main(stack_top: *mut u8) {
     syscall::exit(0);
 }
 
-fn main(env: Env) -> Result<(), PixieError> {
+fn main(env: Env) -> Result<(), Error> {
     let args = cli::Args::parse(&env);
+    println!("Packing guest {:?}", args.input);
+    let guest_file = File::open(args.input)?;
+    let guest_map = guest_file.map()?;
+    let guest_obj = Object::new(guest_map.as_ref())?;
 
+    let guest_hull = guest_obj.segments().load_convex_hull()?;
     let mut output = Writer::new(&args.output, 0o755)?;
+    relink_stage1(guest_hull, &mut output)?;
 
-    {
-        let stage1 = include_bytes!(concat!(env!("OUT_DIR"), "/embeds/release/stage1"));
-        output.write_all(stage1)?;
-    }
+    Ok(())
+}
 
-    let guest_offset = output.offset();
-    let guest_compressed_len;
-    let guest_len;
+fn relink_stage1(guest_hull: Range<u64>, writer: &mut Writer) -> Result<(), Error> {
+    let obj = Object::new(include_bytes!(concat!(
+        env!("OUT_DIR"),
+        "/embeds/libstage1.so"
+    )))?;
 
-    {
-        let guest = File::open(&args.input)?;
-        let guest = guest.map()?;
-        let guest = guest.as_ref();
-        guest_len = guest.len();
+    let hull = obj.segments().load_convex_hull()?;
+    assert_eq!(hull.start, 0, "state1 must be relocatable");
 
-        let guest_compressed = lz4_flex::compress_prepend_size(guest);
-        guest_compressed_len = guest_compressed.len();
-        output.write_all(&guest_compressed[..])?;
-    }
+    let base_offset = if guest_hull.start == 0 {
+        0x800000
+    } else {
+        guest_hull.start
+    };
+    println!("Picked base_offset 0x{:x}", base_offset);
 
-    output.align(PAGE_SIZE)?;
-    let manifest_offset = output.offset();
+    let hull = (hull.start + base_offset)..(hull.end + base_offset);
+    println!("Stage1 hull: {:x?}", hull);
+    println!(" Guest hull: {:x?}", hull);
 
-    {
-        let manifest = Manifest {
-            guest: Resource {
-                offset: guest_offset as _,
-                len: guest_compressed_len as _,
-            },
-        };
-
-        output.write_deku(&manifest)?;
-    }
-
-    {
-        let marker = EndMarker {
-            manifest_offset: manifest_offset as _,
-        };
-
-        output.write_deku(&marker)?;
-    }
-
-    println!(
-        "Wrote {} ({:.2}% of input)",
-        args.output,
-        output.offset() as f64 / guest_len as f64 * 100.0,
-    );
+    let mut mapped = MappedObject::new(&obj, None)?;
+    println!("Loaded stage1");
 
     Ok(())
 }

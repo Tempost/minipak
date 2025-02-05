@@ -188,6 +188,7 @@ name = "minipak"
 version = "0.1.0"
 dependencies = [
  "compiler_builtins",
+ "displaydoc",
  "encore",
  "lz4_flex",
  "pixie",
@@ -263,8 +264,6 @@ version = "0.1.0"
 dependencies = [
  "compiler_builtins",
  "encore",
- "lz4_flex",
- "pixie",
 ]
 
 [[package]]
