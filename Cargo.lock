@@ -264,6 +264,17 @@ version = "0.1.0"
 dependencies = [
  "compiler_builtins",
  "encore",
+ "pixie",
+]
+
+[[package]]
+name = "stage2"
+version = "0.1.0"
+dependencies = [
+ "compiler_builtins",
+ "encore",
+ "lz4_flex",
+ "pixie",
 ]
 
 [[package]]

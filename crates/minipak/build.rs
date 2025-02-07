@@ -9,6 +9,7 @@ fn main() {
     }
 
     cargo_build(&PathBuf::from("../stage1"));
+    cargo_build(&PathBuf::from("../stage2"));
 }
 
 fn cargo_build(path: &Path) {

@@ -213,7 +213,7 @@ impl<'a> MappedObject<'a> {
         }
         let mem_len = hull.end - hull.start;
 
-        let mut map_opts = MmapOptions::new(mem_len);
+        let mut map_opts = MmapOptions::new(hull.end - hull.start);
         // TODO: Make it so the map_opts reflect what the segment actually requires
         map_opts.protection(MmapProtection::READ | MmapProtection::WRITE | MmapProtection::EXEC);
         if let Some(at) = at {
@@ -236,7 +236,8 @@ impl<'a> MappedObject<'a> {
 
     /// Apply relocations with the given base offset
     pub fn relocate(&mut self, base_offset: u64) -> Result<(), PixieError> {
-        if !self.is_relocatable() {
+        // ?????????? Stage1 starts a relocatable, then becomes not?
+        if self.is_relocatable() {
             return Err(PixieError::CannotRelocateNonRelocatableObject);
         }
 
@@ -246,9 +247,10 @@ impl<'a> MappedObject<'a> {
         let relas = dyn_entries
             .find(DynamicTagType::Rela)?
             .parse_all(dyn_entries.find(DynamicTagType::RelaSz)?);
+
         let plt_relas: Box<dyn Iterator<Item = _>> = match dyn_entries.find(DynamicTagType::JmpRel)
         {
-            Ok(jmprel) => Box::new(jmprel.parse_all(dyn_entries.find(DynamicTagType::JmpRel)?)),
+            Ok(jmprel) => Box::new(jmprel.parse_all(dyn_entries.find(DynamicTagType::PltRelSz)?)),
             Err(_) => Box::new(core::iter::empty()) as _,
         };
 
@@ -313,6 +315,12 @@ impl<'a> MappedObject<'a> {
     /// Returns the base address for this executable
     pub fn base(&self) -> u64 {
         self.mem.as_ptr() as _
+    }
+
+    /// Returns the (non-relocated) vaddr of a symbol by name
+    pub fn lookup_sym(&self, name: &str) -> Result<Sym, PixieError> {
+        let dyn_entries = self.object.read_dynamic_entries()?;
+        dyn_entries.syms()?.by_name(name)
     }
 }
 
@@ -449,4 +457,24 @@ impl<'a> Syms<'a> {
             i += 1;
         }
     }
+}
+
+/// Align *down* to the nearest 4k boundary
+pub fn floor(val: u64) -> u64 {
+    val & !0xFFF
+}
+
+/// Align *up* to the nearest 4k boundary
+pub fn ceil(val: u64) -> u64 {
+    if floor(val) == val {
+        val
+    } else {
+        floor(val + 0x1000)
+    }
+}
+
+/// Given a convex hul, align its start *down* to nearest 4k boundary and
+/// its end *up* to the nearest 4k boundary
+pub fn align_hull(hull: Range<u64>) -> Range<u64> {
+    floor(hull.start)..ceil(hull.end)
 }

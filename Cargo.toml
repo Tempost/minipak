@@ -1,6 +1,12 @@
 [workspace]
 resolver = "2"
-members = ["crates/encore", "crates/minipak", "crates/pixie", "crates/stage1"]
+members = [
+  "crates/encore",
+  "crates/minipak",
+  "crates/pixie",
+  "crates/stage1",
+  "crates/stage2",
+]
 
 [profile.dev]
 panic = "abort"

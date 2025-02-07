@@ -1,5 +1,5 @@
 [package]
-name = "stage1"
+name = "stage2"
 version = "0.1.0"
 edition = "2024"
 
@@ -7,6 +7,10 @@ edition = "2024"
 crate-type = ["cdylib"]
 
 [dependencies]
+lz4_flex = { version = "0.11.3", default-features = false, features = [
+  "safe-encode",
+  "safe-decode",
+] }
 compiler_builtins = { version = "0.1.144", features = ["mem"] }
 encore = { path = "../encore" }
 pixie = { path = "../pixie" }

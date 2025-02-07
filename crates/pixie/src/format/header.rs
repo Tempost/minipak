@@ -1,5 +1,4 @@
 use super::prelude::*;
-use alloc::vec;
 use custom_debug::Debug;
 
 /// ELF object header

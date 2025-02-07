@@ -27,6 +27,7 @@ impl Resource {
 #[derive(Debug, DekuRead, DekuWrite)]
 #[deku(magic = b"piximani")]
 pub struct Manifest {
+    pub stage2: Resource,
     pub guest: Resource,
 }
 
